@@ -101,6 +101,21 @@ async def predict(file: UploadFile = File(...)):
     with open(save_path, "wb") as buffer:
         buffer.write(await file.read())
 
+    # ✅이미지 해상도 검사
+    img = cv2.imread(save_path)
+    if img is None:
+        print("[ERROR] 이미지 로딩 실패")
+        return JSONResponse(content={"status": 1, "message": "INVALID_IMAGE"}, status_code=400)
+
+    height, width = img.shape[:2]
+    print(f"[LOG] 감지된 해상도: {width}x{height}")
+
+    if width != 1920 or height != 1080:
+        print("[LOG] 이미지 규격 불일치. 분석 중단.")
+        return JSONResponse(content={"status": 1, "message": "INVALID_SIZE"}, status_code=200)
+
+    print("[LOG] 이미지 규격 통과. 분석 시작...")
+
     yolo = YOLOWrapper("../weights/best.pt")
     pca = PCAWrapper()
     opencv = OpenCVWrapper()
@@ -266,4 +281,5 @@ app.include_router(router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
